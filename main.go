@@ -15,6 +15,14 @@ type Transaction struct {
 	Message string `json:"message"`
 }
 
+var isoMap = map[string]string{
+	"00": "Approved",
+	"14": "Invalid card",
+	"51": "Insufficient funds",
+	"54": "Expired card",
+	"91": "Issuer unavailable",
+}
+
 var store = map[string]Transaction{}
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
@@ -57,8 +65,13 @@ func createTransactionHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(tx)
 }
 
+func completeTransactionHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("complete endpoint working"))
+}
+
 func main() {
 	http.HandleFunc("/transactions", createTransactionHandler)
+	http.HandleFunc("/simulate/complete", completeTransactionHandler)
 	http.HandleFunc("/health", healthHandler)
 
 	fmt.Println("server running on :8080")
