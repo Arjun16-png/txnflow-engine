@@ -1,0 +1,10 @@
+# Go
+bin/
+*.exe
+*.out
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
