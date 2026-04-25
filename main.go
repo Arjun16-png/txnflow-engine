@@ -66,7 +66,47 @@ func createTransactionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func completeTransactionHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("complete endpoint working"))
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := r.URL.Query().Get("id")
+
+	tx, exists := store[id]
+	if !exists {
+		http.Error(w, "transaction not found", http.StatusNotFound)
+		return
+	}
+
+	var req struct {
+		ISOCode string `json:"iso_code"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+
+	message, ok := isoMap[req.ISOCode]
+	if !ok {
+		http.Error(w, "unknown iso code", http.StatusBadRequest)
+		return
+	}
+
+	if req.ISOCode == "00" {
+		tx.Status = "SUCCESS"
+	} else {
+		tx.Status = "FAILED"
+	}
+
+	tx.ISOCode = req.ISOCode
+	tx.Message = message
+
+	store[id] = tx
+
+	w.Header().Set("Content Type", "application/json")
+	json.NewEncoder(w).Encode(tx)
 }
 
 func main() {
