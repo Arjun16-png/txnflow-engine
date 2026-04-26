@@ -8,11 +8,12 @@ import (
 )
 
 type Transaction struct {
-	ID      string `json:"id"`
-	Amount  int    `json:"amount"`
-	Status  string `json:"status"`
-	ISOCode string `json:"iso_code"`
-	Message string `json:"message"`
+	ID             string `json:"id"`
+	Amount         int    `json:"amount"`
+	Status         string `json:"status"`
+	ISOCode        string `json:"iso_code"`
+	Message        string `json:"message"`
+	IdempotencyKey string `json:"idempotency_key"`
 }
 
 var isoMap = map[string]string{
@@ -24,6 +25,7 @@ var isoMap = map[string]string{
 }
 
 var store = map[string]Transaction{}
+var idempotencyStore = map[string]string{}
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -37,7 +39,8 @@ func createTransactionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Amount int `json:"amount"`
+		Amount         int    `json:"amount"`
+		IdempotencyKey string `json:"idempotency_key"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -50,15 +53,29 @@ func createTransactionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.IdempotencyKey != "" {
+		if existingID, ok := idempotencyStore[req.IdempotencyKey]; ok {
+			existingTx := store[existingID]
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(existingTx)
+		}
+	}
+
 	tx := Transaction{
-		ID:      fmt.Sprintf("TXN-%d", time.Now().UnixNano()),
-		Amount:  req.Amount,
-		Status:  "PENDING",
-		ISOCode: "",
-		Message: "Awaiting processor result",
+		ID:             fmt.Sprintf("TXN-%d", time.Now().UnixNano()),
+		Amount:         req.Amount,
+		Status:         "PENDING",
+		ISOCode:        "",
+		Message:        "Awaiting processor result",
+		IdempotencyKey: req.IdempotencyKey,
 	}
 
 	store[tx.ID] = tx
+
+	if req.IdempotencyKey != "" {
+		idempotencyStore[req.IdempotencyKey] = tx.ID
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
