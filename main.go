@@ -8,12 +8,13 @@ import (
 )
 
 type Transaction struct {
-	ID             string `json:"id"`
-	Amount         int    `json:"amount"`
-	Status         string `json:"status"`
-	ISOCode        string `json:"iso_code"`
-	Message        string `json:"message"`
-	IdempotencyKey string `json:"idempotency_key"`
+	ID             string   `json:"id"`
+	Amount         int      `json:"amount"`
+	Status         string   `json:"status"`
+	ISOCode        string   `json:"iso_code"`
+	Message        string   `json:"message"`
+	IdempotencyKey string   `json:"idempotency_key"`
+	History        []string `json:"history"`
 }
 
 var isoMap = map[string]string{
@@ -69,6 +70,7 @@ func createTransactionHandler(w http.ResponseWriter, r *http.Request) {
 		ISOCode:        "",
 		Message:        "Awaiting processor result",
 		IdempotencyKey: req.IdempotencyKey,
+		History:        []string{"PENDING"},
 	}
 
 	store[tx.ID] = tx
@@ -113,12 +115,15 @@ func completeTransactionHandler(w http.ResponseWriter, r *http.Request) {
 
 	if req.ISOCode == "00" {
 		tx.Status = "SUCCESS"
+	} else if req.ISOCode == "91" {
+		tx.Status = "RETRY"
 	} else {
 		tx.Status = "FAILED"
 	}
 
 	tx.ISOCode = req.ISOCode
 	tx.Message = message
+	tx.History = append(tx.History, tx.Status)
 
 	store[id] = tx
 
