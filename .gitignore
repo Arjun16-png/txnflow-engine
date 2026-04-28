@@ -1,7 +1,14 @@
+# Node
+node_modules/
+package-lock.json
+
 # Go
 bin/
 *.exe
 *.out
+
+# Env
+.env
 
 # macOS
 .DS_Store
