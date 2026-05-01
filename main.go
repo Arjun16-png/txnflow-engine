@@ -128,7 +128,7 @@ func completeTransactionHandler(w http.ResponseWriter, r *http.Request) {
 
 	store[id] = tx
 
-	w.Header().Set("Content Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tx)
 }
 

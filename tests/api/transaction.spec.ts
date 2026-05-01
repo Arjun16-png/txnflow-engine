@@ -35,5 +35,29 @@ test('same idempotency return same transaction',async({ request }) => {
     expect(secondBody.id).toBe(firstBody.id)
     expect(secondBody.amount).toBe(firstBody.amount)
     expect(secondBody.idempotency_key).toBe(firstBody.idempotency_key)
-}
-)
+})
+
+test ('retry scenario should return RETRY status', async ({ request }) => {
+    const createRes = await request.post('http://localhost:8080/transactions', {
+        data: { amount: 150000},
+    })
+
+    expect(createRes.status()).toBe(201)
+
+    const createBody = await createRes.json()
+    const txnId = createBody.id
+
+    const completeRes = await request.post(
+        `http://localhost:8080/simulate/complete?id=${txnId}`,
+        {
+            data: { iso_code: "91" },
+        }
+    )
+
+    expect(completeRes.status()).toBe(200)
+    const completeBody = await completeRes.json()
+
+    expect(completeBody.status).toBe("RETRY")
+    expect(completeBody.iso_code).toBe("91")
+    expect(completeBody.message).toBe("Issuer unavailable")
+})
