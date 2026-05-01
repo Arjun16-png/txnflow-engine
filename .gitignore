@@ -15,3 +15,7 @@ bin/
 
 # VSCode
 .vscode/
+
+# Test
+test-results/
+playwright-report/
