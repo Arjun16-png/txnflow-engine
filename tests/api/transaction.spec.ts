@@ -61,3 +61,33 @@ test ('retry scenario should return RETRY status', async ({ request }) => {
     expect(completeBody.iso_code).toBe("91")
     expect(completeBody.message).toBe("Issuer unavailable")
 })
+
+test('full flow should track transaction history correctly', async ({ request }) => {
+    const createRes = await request.post('http://localhost:8080/transactions', {
+        data: {amount: 25000}
+    })
+
+    expect(createRes.status()).toBe(201)
+
+    const createBody = await createRes.json()
+    const txnId = createBody.id
+
+    expect(createBody.status).toBe('PENDING')
+    expect(createBody.history).toEqual(['PENDING'])
+
+    const completeRes = await request.post(
+        `http://localhost:8080/simulate/complete?id=${txnId}` ,
+        {
+            data: { iso_code: '00'}
+        }
+    )
+
+    expect(completeRes.status()).toBe(200)
+
+    const completeBody = await completeRes.json()
+
+    expect(completeBody.status).toBe('SUCCESS')
+    expect(completeBody.iso_code).toBe('00')
+    expect(completeBody.message).toBe('Approved')
+    expect(completeBody.history).toEqual(['PENDING', 'SUCCESS'])
+})
